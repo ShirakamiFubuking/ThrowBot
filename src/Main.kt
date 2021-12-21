@@ -8,9 +8,8 @@ import javax.imageio.IIOImage
 import javax.imageio.ImageIO
 import javax.imageio.stream.FileImageOutputStream
 
-
-val mask = ImageIO.read(File("p_mask.png"))
-val satori = ImageIO.read(File("p.png"))
+val mask = Tools.loadJarData("p_mask.png")
+val satori = Tools.loadJarData("p.png") //ImageIO.read(File("p.png"))
 
 fun deepCopy(bi: BufferedImage): BufferedImage {
     val cm = bi.colorModel
@@ -76,23 +75,26 @@ fun main(args: Array<String>) {
     val bot = Bot(args[0].toInt(), args[1], args[2], "")
     val throwMap = mutableMapOf<String, Int>() // <userPhotoId, fileId>
     bot.addCommandListener(object : CommandListener {
-        override fun onCommand(msg: Message, chatId: Long, senderId: Int, msgId: Long, command: String, arg: String) {
+        override fun onCommand(msg: Message, command: String, arg: String) {
+            val chatId = msg.chatId
+            val msgId = msg.id
+            val sender = msg.senderId
             when (command) {
                 "/throw" -> {
-                    val sendPic = fun(id: Int) {
+                    val sendPic = fun(id: Long) {
                         // 取得使用者頭像
                         bot.client.send(GetUserProfilePhotos(id, 0, 1)) {
                             val chatPhotos = it as ChatPhotos
                             val tdFile = chatPhotos.photos[0].sizes[0].photo
                             val file = File("$id.webp")
                             throwMap[tdFile.remote.uniqueId]?.let { id ->
-                                val content = InputMessageSticker(InputFileId(id), null, 512, 512)
+                                val content = InputMessageSticker(InputFileId(id), null, 512, 512, "🦊")
                                 bot.client.send(SendMessage(chatId, 0, msgId, null, null, content), null, null)
                                 return@send
                             }
                             val uploadAndSend = fun(file: File) {
                                 val inputFile = InputFileLocal(file.path)
-                                val content = InputMessageSticker(inputFile, null, 512, 512)
+                                val content = InputMessageSticker(inputFile, null, 512, 512, "🦊")
                                 bot.client.send(SendMessage(chatId, 0, msgId, null, null, content), { r ->
                                     throwMap[tdFile.remote.uniqueId] =
                                         ((((r as Message).content as MessageSticker).sticker as Sticker).sticker as TdApi.File).id
@@ -116,10 +118,16 @@ fun main(args: Array<String>) {
                     }
                     // 有回復，丟被回覆者；無回覆丟自己
                     if (msg.replyToMessageId.toString() == "0") {
-                        sendPic(senderId)
+                        val id = run {
+                            when (sender.constructor) {
+                                MessageSenderUser.CONSTRUCTOR -> return@run (sender as MessageSenderUser).userId
+                                else -> 0
+                            }
+                        }
+                        sendPic(id)
                     } else {
                         bot.client.send(GetRepliedMessage(chatId, msgId)) {
-                            sendPic(((it as Message).sender as MessageSenderUser).userId)
+                            sendPic(((it as Message).senderId as MessageSenderUser).userId)
                         }
                     }
                 }

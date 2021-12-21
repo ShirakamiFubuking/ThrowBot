@@ -21,10 +21,10 @@ fun printlnErr(string: Any) {
 val newLine: String = System.getProperty("line.separator")
 
 class Bot constructor(
-        private val api_id: Int,
-        private val api_hash: String,
-        private val phoneNumber: String,
-        private val password: String
+    private val api_id: Int,
+    private val api_hash: String,
+    private val phoneNumber: String,
+    private val password: String
 ) {
     lateinit var client: Client
     lateinit var me: User
@@ -94,9 +94,9 @@ class Bot constructor(
                 val obj = it as UpdateNewMessage
                 val msgContent = obj.message.content
                 val chatId = obj.message.chatId
-                val senderId = obj.message.sender.let {
-                    if (obj.message.sender.constructor == MessageSenderUser.CONSTRUCTOR) {
-                        return@let (obj.message.sender as MessageSenderUser).userId
+                val senderId = obj.message.senderId.let {
+                    if (obj.message.senderId.constructor == MessageSenderUser.CONSTRUCTOR) {
+                        return@let (obj.message.senderId as MessageSenderUser).userId
                     } else {
                         return@let 0
                     }
@@ -135,7 +135,7 @@ class Bot constructor(
                             }
                             if (at == me.username || at == "") {
                                 commandList.forEach { l ->
-                                    l.onCommand(obj.message, chatId, senderId, msgId, cmd, arg)
+                                    l.onCommand(obj.message, cmd, arg)
                                 }
                             }
                         }
@@ -199,8 +199,8 @@ class Bot constructor(
                 client.send(SetTdlibParameters(parameters), authorizationRequestHandler)
             }
             AuthorizationStateWaitEncryptionKey.CONSTRUCTOR -> client.send(
-                    CheckDatabaseEncryptionKey(),
-                    authorizationRequestHandler
+                CheckDatabaseEncryptionKey(),
+                authorizationRequestHandler
             )
             AuthorizationStateWaitPhoneNumber.CONSTRUCTOR -> {
                 if (phoneNumber.length > 20) { // greater than 20 is bot token
